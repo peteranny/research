@@ -1,7 +1,7 @@
 all:
 
 mk:
-	python mk_$(M).py $(A)
+	python mk_$(m).py $(v)
 
 clean:
 	rm *~ .*
