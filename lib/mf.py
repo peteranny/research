@@ -24,7 +24,7 @@ except:
 @OUTPUT:
     the final matrices P and Q
 """
-def matrix_factorization(R, P, Q, K, steps=5000, alpha=0.0002, beta=0.02):
+def matrix_factorization(R, P, Q, K, steps=10, alpha=0.0002, beta=0.02):
     Q = Q.T
     for step in xrange(steps):
         for i in xrange(len(R)):
