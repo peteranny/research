@@ -6,6 +6,7 @@ data_end_d=10
 all:
 	for d in $(dd); \
 	do \
+	echo "=== $${d} out of $(data_end_d) ==="; \
 	python $(phase_path)phase1_set.py $(data_path) $(data_end_d) $${d} ;\
 	python train.py data_$${d}_in_$(data_end_d).dat.train $(data_path)users.dat $(data_path)items.dat data_$${d}_in_$(data_end_d).dat.train.model ;\
 	python $(phase_path)phase3_predict.py data_$${d}_in_$(data_end_d).dat.train.model ;\

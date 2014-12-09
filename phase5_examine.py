@@ -9,7 +9,7 @@ with open(fin_filename) as fin:
     for line in fin:
         u,i,r,t = map(int,line.split())
         ratings.append((u,i,r,t))
-progress("%d testing ratings", br=True)
+progress("%d testing ratings"%len(ratings), br=True)
 
 fin_filename = recommend_filename
 progress("reading %s..."%fin_filename)

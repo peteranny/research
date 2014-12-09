@@ -9,7 +9,7 @@ U,I = dict(),dict()
 with open(model_filename) as fin:
     line = fin.readline()
     nUsers,K = map(int,line.split())
-    progress("%d users, K=%d"%(nUsers,K),br=True)
+    progress("%d users, K=%d"%(nUsers,K))
     for j in range(nUsers):
         line = fin.readline()
         u,vec = line.split(':')
@@ -19,7 +19,7 @@ with open(model_filename) as fin:
     line = fin.readline()
     nItems,K_ = map(int,line.split())
     assert K_==K # dimension of U,I should be identical
-    progress("%d items, K=%d"%(nItems,K),br=True)
+    progress("%d items, K=%d"%(nItems,K))
     for j in range(nItems):
         line = fin.readline()
         i,vec = line.split(':')

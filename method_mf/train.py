@@ -45,7 +45,7 @@ progress("matrix size=%d"%len(ratings),br=True)
 progress("training...")
 K = 2
 steps = 10
-alpha = 0.02
+alpha = 0.002
 beta = 0.02
 import numpy
 users = [u for u,i,r,t in ratings]
@@ -55,13 +55,19 @@ for u in users:
     U[u] = numpy.random.rand(K)
 for i in items:
     I[i] = numpy.random.rand(K)
+#import warnings
+#warnings.filterwarnings('error')
 for step in xrange(steps):
     progress("step %d..."%step)
     for u,i,r,t in ratings:
         e = r - numpy.dot(U[u],I[i])
         for k in xrange(K):
+            #try:
             U[u][k] += alpha * (2 * e * I[i][k] - beta * U[u][k])
             I[i][k] += alpha * (2 * e * U[u][k] - beta * I[i][k])
+            #except:
+            #    print e
+            #    exit()
 
 fout_filename = model_filename
 progress("writing %s..."%fout_filename)
