@@ -1,5 +1,5 @@
 import sys
-_, data_dirpath, nDiv = sys.argv
+_,data_dirpath,nDiv = sys.argv
 nDiv = int(nDiv)
 from lib import progress,gen_data_filename,gen_path
 
@@ -61,12 +61,18 @@ with open(fout_filename, "w") as fout:
             for line in fin:
                 u,i,r,t = map(int, line.split())
                 exposure[d][i] += 1
-    fout.write("item\t%s\n"%("\t".join(["div_%d"%(d+1) for d in range(nDiv)])))
+    fout.write("item\t%s\n"%("\t".join(["t>%d"%timeline[d*timeIndex_chunkSize] for d in range(nDiv)])))
     for i in sorted(items):
         fout.write("%d:\t"%i)
         for d in range(nDiv):
             fout.write("%d\t"%exposure[d][i])
         fout.write("\n")
+
+fout_filename = gen_path(data_dirpath, "ratings.dat", create=True)
+progress("writing %s..."%fout_filename)
+with open(fout_filename, "w") as fout:
+    for u,i,r,t in ratings:
+        fout.write("%d\t%d\t%d\t%d\n"%(u,i,r,t))
 
 progress("done", br=True)
 
