@@ -43,8 +43,8 @@ ratings = [(u,i,r,t) for (u,i),(r,t) in R.iteritems()]
 progress("matrix size=%d"%len(ratings),br=True)
 
 progress("training...")
-K = 2
-steps = 10
+K = 5
+steps = 100
 alpha = 0.002
 beta = 0.02
 import numpy

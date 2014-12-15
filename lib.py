@@ -4,6 +4,8 @@ def progress(msg, br=False):
     sys.stderr.flush()
 
 def gen_path(dirpath, filename, create=False):
+    if dirpath[-1]=='/' or dirpath[-1]=='\\':
+        dirpath = dirpath[:-1]
     if create:
         import os
         if not os.path.exists(dirpath):
