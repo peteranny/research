@@ -4,7 +4,7 @@ from __future__ import division
 import sys
 _,data_dirpath,nDiv = sys.argv
 nDiv = int(nDiv)
-from lib import progress, gen_path, gen_data_filename
+from lib import progress, gen_path, gen_data_filename, gen_mk_out_filename
 
 ### read ratings
 fin_filename = gen_path(data_dirpath, "ratings.dat")
@@ -74,7 +74,7 @@ for i,d in start_d.items():
 '''
 
 ### rmse for each time division
-fout_filename = "%s.out"%sys.argv[0][sys.argv[0].index('_')+1:sys.argv[0].rindex('.')]
+fout_filename = gen_mk_out_filename()
 with open(fout_filename, "w") as fout:
     for d in range(nDiv-1): # no prediction result for the last time division
         ### read predicted ratings
