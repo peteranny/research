@@ -6,6 +6,29 @@ _,data_dirpath,nDiv,nMonitor = sys.argv
 nDiv,nMonitor = int(nDiv),int(nMonitor)
 from lib import progress, gen_path, gen_data_filename, gen_mk_out_filename
 
+### read ratings
+fin_filename = gen_path(data_dirpath, "ratings.dat")
+progress("reading %s..."%fin_filename)
+ratings = []
+with open(fin_filename) as fin:
+    for line in fin:
+        u,i,r,t = line.split()
+        u,i,r,t = int(u),int(i),int(r),int(t)
+        ratings.append((u,i,r,t))
+
+### make item quality
+from collections import defaultdict
+i_ratings = defaultdict(list)
+for u,i,r,t in ratings:
+    i_ratings[i].append(r)
+import numpy
+i_quality = {}
+for i,rs in i_ratings.iteritems():
+    m = numpy.mean(rs)
+    v = numpy.std(rs)
+    n = len(rs)
+    i_quality[i] = (m,v,n)
+
 ### read item initial exposure
 fin_filename = gen_path(data_dirpath, "data.analysis")
 progress("reading %s..."%fin_filename)
@@ -23,11 +46,11 @@ monitor_items = monitor_items[0:nMonitor] #TODO
 
 ### see its recommendation over all divisions
 fout_filename = gen_mk_out_filename()
-progress("write %s..."%fout_filename)
 with open(fout_filename, "w") as fout:
-    fout.write("i\t%s\n"%"\t".join(["div_%d"%d for d in range(1,nDiv)]))
+    fout.write("i/#/%%/T\t%s\n"%"\t".join(["div_%d"%d for d in range(1,nDiv)]))
     ### for each monitored items
-    for m_i in monitor_items:
+    for j,m_i in enumerate(monitor_items):
+        progress("writing %d-th item..."%j)
         d_info = []
         for d in range(1, nDiv): ### for each prediction file
             fin_filename = gen_data_filename(d, nDiv, "train.model.predict.recommend")
@@ -54,10 +77,11 @@ with open(fout_filename, "w") as fout:
                 hit_midtime = numpy.median(hit_time)
 
             d_info.append((recomm_num, hit_num, hit_midtime))
-        fout.write("%d:\t%d\n"%(m_i, init_exposure[m_i]))
-        fout.write("num\t%s\n"%("\t".join(["%d"%hit_num for recomm_num,hit_num,hit_midtime in d_info])))
-        fout.write("ratio\t%s\n"%("\t".join(["%.2f"%(hit_num/recomm_num) for recomm_num,hit_num,hit_midtime in d_info])))
-        fout.write("midtime\t%s\n"%("\t".join(["%d"%int(hit_midtime) if hit_num>0 else "--" for recomm_num,hit_num,hit_midtime in d_info])))
+        m,v,n = i_quality[m_i]
+        fout.write("%d:exp=%d,quality=%.1f,std=%.2f,n=%d\n"%(m_i, init_exposure[m_i], m, v, n))
+        fout.write("\t%s\n"%("\t".join(["%d"%hit_num for recomm_num,hit_num,hit_midtime in d_info])))
+        fout.write("\t%s\n"%("\t".join(["%.1f%%"%(hit_num/recomm_num*100) if recomm_num>0 else "--" for recomm_num,hit_num,hit_midtime in d_info])))
+        fout.write("\t%s\n"%("\t".join(["%d"%int(hit_midtime) if hit_num>0 else "--" for recomm_num,hit_num,hit_midtime in d_info])))
 
 progress("done", br=True)
 

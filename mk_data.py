@@ -97,7 +97,7 @@ with open(fout_filename, "w") as fout:
                 u,i,r,t = map(int, line.split())
                 exposure[d][i] += 1
     ### write item exposure over divisions
-    fout.write("item,t<\t%s\n"%("\t".join(["%d"%timeline[d*timeIndex_chunkSize] for d in range(1,nDiv+1)])))
+    fout.write("item\\t<\t%s\n"%("\t".join(["%d"%timeline[d*timeIndex_chunkSize] for d in range(1,nDiv+1)])))
     for i in sorted(items):
         fout.write("%d:\t"%i)
         for d in range(1,nDiv+1):

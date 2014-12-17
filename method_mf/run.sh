@@ -1,10 +1,10 @@
 #!/bin/bash
 phase_path=../
-data_path=../dataMini/
+data_path=../data20/
 train_lang=python
 train_prog=train.py
 topK=20
-data_end_d=10
+data_end_d=20
 
 for d in `seq 1 $(($data_end_d-1))`;
 do
