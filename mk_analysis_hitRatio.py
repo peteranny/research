@@ -2,7 +2,7 @@
 
 from __future__ import division
 import sys
-_,data_dirpath,nDiv,nMonitor = sys.argv
+_,data_dirpath,nDiv,method_name,nMonitor = sys.argv
 nDiv,nMonitor = int(nDiv),int(nMonitor)
 from lib import progress, gen_path, gen_data_filename, gen_mk_out_filename
 
@@ -45,7 +45,7 @@ monitor_items = sorted(init_exposure, key=init_exposure.get)
 monitor_items = monitor_items[0:nMonitor] #TODO
 
 ### see its recommendation over all divisions
-fout_filename = gen_mk_out_filename()
+fout_filename = gen_path(method_name, gen_mk_out_filename())
 with open(fout_filename, "w") as fout:
     fout.write("i/#/%%/T\t%s\n"%"\t".join(["div_%d"%d for d in range(1,nDiv)]))
     ### for each monitored items
@@ -53,7 +53,7 @@ with open(fout_filename, "w") as fout:
         progress("writing %d-th item..."%j)
         d_info = []
         for d in range(1, nDiv): ### for each prediction file
-            fin_filename = gen_data_filename(d, nDiv, "train.model.predict.recommend")
+            fin_filename = gen_path(method_name, gen_data_filename(d, nDiv, "train.model.predict.recommend"))
             recomm_num = 0
             with open(fin_filename) as fin:
                 for line in fin:
@@ -62,7 +62,7 @@ with open(fout_filename, "w") as fout:
                     if m_i in iis:
                         recomm_num += 1 ### item has been recommended
 
-            fin_filename = gen_data_filename(d, nDiv, "train.model.predict.recommend.examine")
+            fin_filename = gen_path(method_name, gen_data_filename(d, nDiv, "train.model.predict.recommend.passed"))
             hit_num = 0
             hit_time = []
             with open(fin_filename) as fin:

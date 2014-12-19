@@ -2,7 +2,7 @@
 
 from __future__ import division
 import sys
-_,data_dirpath,nDiv = sys.argv
+_,data_dirpath,nDiv,method_name = sys.argv
 nDiv = int(nDiv)
 from lib import progress, gen_path, gen_data_filename, gen_mk_out_filename
 
@@ -74,11 +74,11 @@ for i,d in start_d.items():
 '''
 
 ### rmse for each time division
-fout_filename = gen_mk_out_filename()
+fout_filename = gen_path(method_name, gen_mk_out_filename())
 with open(fout_filename, "w") as fout:
     for d in range(nDiv-1): # no prediction result for the last time division
         ### read predicted ratings
-        fin_filename = gen_data_filename(d+1, nDiv, "train.model.predict")
+        fin_filename = gen_path(method_name, gen_data_filename(d+1, nDiv, "train.model.predict"))
         progress("reading %s..."%fin_filename)
         ratings_ = []
         with open(fin_filename) as fin:

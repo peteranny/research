@@ -1,4 +1,5 @@
 def progress(msg, br=False):
+    msg = "* %s"%msg
     import sys
     sys.stderr.write("\r%s\033[K"%(msg) + ("\n" if br else ""))
     sys.stderr.flush()

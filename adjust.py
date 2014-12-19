@@ -1,11 +1,11 @@
-### phase3_predict
+### adjust
 
-import sys,os
-_, model_filename = sys.argv
+import sys,numpy
+_,candidate_filename,model_filename,exposure_filename,predict_filename = sys.argv
+sys.path.append("..")
 from lib import progress
 
 ### read model
-import numpy
 fin_filename = model_filename
 progress("reading %s..."%fin_filename)
 U,I = dict(),dict()
