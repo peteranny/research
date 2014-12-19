@@ -1,69 +1,68 @@
 from __future__ import division
-import sys,os
-_, train_filename, users_filename, items_filename, model_filename = sys.argv
+import sys,os,numpy,copy
 sys.path.append("..")
-from lib import progress
+from collections import defaultdict
+_,train_filename,users_filename,items_filename,model_filename = sys.argv
+import lib
+def progress(msg, br=False):
+    lib.progress("[TRAIN] %s"%msg,br)
 
+# read ratings
 fin_filename = train_filename
-progress("reading %s..."%fin_filename)
 ratings = []
 with open(fin_filename) as fin:
+    progress("train:reading %s..."%fin_filename)
     for line in fin:
         u,i,r,t = map(int, line.split())
         ratings.append((u,i,r,t))
 progress("%d ratings"%len(ratings),br=True)
 
+# read users
 fin_filename = users_filename
-progress("reading %s..."%fin_filename)
 users = []
 with open(fin_filename) as fin:
+    progress("reading %s..."%fin_filename)
     for line in fin:
         u = int(line)
         users.append(u)
 progress("%d users"%len(users),br=True)
 
+# read items
 fin_filename = items_filename
-progress("reading %s..."%fin_filename)
 items = []
 with open(fin_filename) as fin:
+    progress("reading %s..."%fin_filename)
     for line in fin:
         u = int(line)
         items.append(u)
 progress("%d items"%len(items),br=True)
 
-progress("interpolating...")
-from collections import defaultdict
-R = dict()
-for u,i,r,t in ratings:
-    R[u,i] = (r,t)
+# interpolate
+progress("progressing data...")
+rm = 2
+ui_ratings = {}
 for u in users:
     for i in items:
-        if (u,i) not in R:
-            R[u,i] = (1e-5,-1) # impute rating, invalid time
-ratings = [(u,i,r,t) for (u,i),(r,t) in R.iteritems()]
-progress("matrix size=%d"%len(ratings),br=True)
-
-progress("training...")
-K = 5
-steps = 10
-eta = 0.01
-lmd = 0.02
-import numpy
-users = list(set([u for u,i,r,t in ratings]))
-items = list(set([i for u,i,r,t in ratings]))
-U,I = dict(),dict()
-for u in users:
-    U[u] = numpy.random.rand(K)
-for i in items:
-    I[i] = numpy.random.rand(K)
+        ui_ratings[u,i] = rm
+for u,i,r,t in ratings:
+    ui_ratings[u,i] = r
 users_of = {i:[] for i in items}
 items_of = {u:[] for u in users}
 for u,i,r,t in ratings:
     users_of[i].append((u,r))
     items_of[u].append((i,r))
-#import warnings
-#warnings.filterwarnings('error')
-import copy
+
+# train
+progress("training...")
+K = 5
+steps = 10
+eta = 0.01
+lmd = 0.02
+U,I = dict(),dict()
+for u in users:
+    U[u] = numpy.random.rand(K)
+for i in items:
+    I[i] = numpy.random.rand(K)
 E = float('inf')
 for step in xrange(steps):
     oldU,oldI = copy.deepcopy(U),copy.deepcopy(I)
@@ -102,6 +101,7 @@ for step in xrange(steps):
             eta *= 1.05
             break
 
+# output
 fout_filename = model_filename
 progress("writing %s..."%fout_filename)
 with open(model_filename, "w") as fout:
