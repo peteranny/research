@@ -4,7 +4,7 @@ sys.path.append("..")
 _,candidate_filename,model_filename,exposure_filename,predict_filename = sys.argv
 import lib
 def progress(msg, br=False):
-    lib.progress("[ADJUST] %s"%msg,br)
+    lib.progress("[AUGMENT] %s"%msg,br)
 
 # read model
 fin_filename = model_filename

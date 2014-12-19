@@ -6,7 +6,7 @@ from __future__ import division
 import sys, os, numpy
 from collections import defaultdict
 from lib import progress, gen_data_filename, gen_path
-_,data_dirpath,train_end_at_d,data_end_d,train_lang,train_prog,adjust_lang,adjust_prog,k,locks = sys.argv
+_,data_dirpath,train_end_at_d,data_end_d,train_lang,train_prog,augment_lang,augment_prog,k,locks = sys.argv
 _lock_setData,_lock_train,_lock_predict,_lock_recommend,_lock_examine = map(lambda b:b=='1',list(locks))
 train_end_at_d,data_end_d,k = int(train_end_at_d),int(data_end_d),int(k)
 
@@ -270,8 +270,8 @@ if _lock_predict:
     # predict
     progress("predicting...")
     os.system("%s %s %s %s %s %s"%(
-        adjust_lang,
-        adjust_prog,
+        augment_lang,
+        augment_prog,
         candidates_filename, # argv[1]
         model_filename,      # argv[3]
         exposure_filename,   # argv[2]
