@@ -201,14 +201,23 @@ if _lock_train:
     progress("training...")
     users_filename = gen_path(data_dirpath, "users.dat")
     items_filename = gen_path(data_dirpath, "items.dat")
-    os.system("%s %s %s %s %s %s"%(
-        train_lang,
+    cmd = "%s %s %s %s %s"%(
         train_prog,
         train_filename, # argv[1]
         users_filename, # argv[2]
         items_filename, # argv[3]
         model_filename  # argv[4]
-    ))
+    )
+    def gen_cmd(train_lang, cmd):
+        lang_cmds ={
+                "python": "%s %s"%(train_lang, cmd),
+                "matlab": "%s -r \"%s\""%(train_lang, cmd),
+                }
+        try:
+            return lang_cmds[train_lang]
+        except KeyError:
+            raise Exception("available languages are %s, %s is not included (please contact administrator)"%(", ".join(lang_cmds.keys())), train_lang)
+    os.system(gen_cmd(train_lang, cmd))
 
     progress("training done!", br=True)
 
