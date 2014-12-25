@@ -2,8 +2,8 @@
 
 from __future__ import division
 import sys
-_,data_dirpath,nDiv,method_name = sys.argv
-nDiv = int(nDiv)
+_,data_dirpath,nDiv,method_name,topK = sys.argv
+nDiv,topK = int(nDiv),int(topK)
 from lib import progress, gen_path, gen_data_filename, gen_mk_out_filename
 
 ### items 
@@ -73,8 +73,19 @@ for d in range(1, nDiv):
 ### output result
 fout_filename = gen_path(method_name, gen_mk_out_filename())
 with open(fout_filename, "w") as fout:
+    progress("writing %s..."%fout_filename)
     for d in range(1, nDiv):
         fout.write("%f\n"%recall_at[d])
+
+### plot
+progress("plotting...")
+import matplotlib.pyplot as plt
+X = range(1, nDiv)
+Y = [recall_at[x] for x in X]
+plt.plot(X, Y, "o-")
+plt.xlabel("Time")
+plt.ylabel("Recall@%d"%topK)
+plt.show()
 
 progress("done", br=True)
 

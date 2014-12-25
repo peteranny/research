@@ -40,68 +40,51 @@ with open(fin_filename) as fin:
         items.append(u)
 progress("%d items"%len(items),br=True)
 
-'''
-### add imputed ratings
-progress("processing ui_ratings...")
-for u in users:
-    for i in items:
-        if (u,i) not in ui_ratings:
-            ui_ratings[u,i] = rm
-'''
-
-'''
-### read data histogram (to figure out item's starting time)
-fin_filename = gen_path(data_dirpath, "data.analysis")
-progress("reading %s..."%fin_filename)
-start_d = {}
-with open(fin_filename) as fin:
-    for i,line in enumerate(fin):
-        if i==0: continue
-        i,xs = line.split(':')
-        i,xs = int(i),map(int,xs.split())
-        d = 0
-        for dd in range(0, nDiv):
-            if xs[dd]>0: break
-            d += 1
-        assert d<=nDiv-1
-        start_d[i] = d
-
-### classify items by its starting time
-from collections import defaultdict
-start_d_items = defaultdict(list)
-for i,d in start_d.items():
-    start_d_items[d].append(i)
-'''
-
 ### rmse for each time division
+rmse_at = {}
+for d in range(1, nDiv): # 1, 2, ..., nDiv-1
+    ### read predicted ratings
+    fin_filename = gen_path(method_name, gen_data_filename(d, nDiv, "train.model.predict"))
+    progress("reading %s..."%fin_filename)
+    ratings_ = []
+    with open(fin_filename) as fin:
+        for line in fin:
+            u,i,r_ = line.split()
+            u,i,r_ = int(u),int(i),float(r_)
+            ratings_.append((u,i,r_))
+
+    ### convert preditecd ratings format
+    ui_ratings_ = {}
+    for u,i,r_ in ratings_:
+        ui_ratings_[u,i] = r_
+
+    rmse = 0
+    total_num = 0
+    for u,i in ui_ratings:
+        r = ui_ratings[u,i]
+        r_ = ui_ratings_[u,i]
+        rmse += (r - r_)**2
+        total_num += 1
+    rmse /= total_num
+    rmse **= 1/2
+
+    rmse_at[d] = rmse
+
 fout_filename = gen_path(method_name, gen_mk_out_filename())
 with open(fout_filename, "w") as fout:
-    for d in range(nDiv-1): # no prediction result for the last time division
-        ### read predicted ratings
-        fin_filename = gen_path(method_name, gen_data_filename(d+1, nDiv, "train.model.predict"))
-        progress("reading %s..."%fin_filename)
-        ratings_ = []
-        with open(fin_filename) as fin:
-            for line in fin:
-                u,i,r_ = line.split()
-                u,i,r_ = int(u),int(i),float(r_)
-                ratings_.append((u,i,r_))
+    progress("writing %s..."%fout_filename)
+    for d in range(1, nDiv):
+        fout.write("%f\n"%rmse_at[d])
 
-        ### convert preditecd ratings format
-        ui_ratings_ = {}
-        for u,i,r_ in ratings_:
-            ui_ratings_[u,i] = r_
-
-        rmse = 0
-        total_num = 0
-        for u,i in ui_ratings:
-            r = ui_ratings[u,i]
-            r_ = ui_ratings_[u,i]
-            rmse += (r - r_)**2
-            total_num += 1
-        rmse /= total_num
-        rmse **= 1/2
-        fout.write("%f\n"%rmse)
+### plot
+progress("plotting...")
+import matplotlib.pyplot as plt
+X = range(1,nDiv)
+Y = [rmse_at[x] for x in X]
+plt.plot(X, Y, 'o-')
+plt.xlabel("Time")
+plt.ylabel("RMSE")
+plt.show()
 
 progress("done", br=True)
 

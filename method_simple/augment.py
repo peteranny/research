@@ -1,7 +1,7 @@
 from __future__ import division
 import sys,numpy
 sys.path.append("..")
-_,candidate_filename,model_filename,exposure_filename,predict_filename = sys.argv
+_,candidate_filename,model_filename,exposure_filename,clicked_filename,predict_filename = sys.argv
 import lib
 def progress(msg, br=False):
     lib.progress("[AUGMENT] %s"%msg,br)

@@ -5,7 +5,7 @@
 from __future__ import division
 import sys, os, numpy
 from collections import defaultdict
-from lib import progress, gen_data_filename, gen_path
+from lib import *
 _,data_dirpath,train_end_at_d,data_end_d,train_lang,train_prog,augment_lang,augment_prog,k,locks = sys.argv
 _lock_setData,_lock_train,_lock_predict,_lock_recommend,_lock_examine = map(lambda b:b=='1',list(locks))
 train_end_at_d,data_end_d,k = int(train_end_at_d),int(data_end_d),int(k)
@@ -73,6 +73,7 @@ def read_recommend_at(d):
             u,iis = line.split(':')
             u,iis = int(u), map(int,iis.split())
             recomm_items_of[u] = iis
+    progress("%d recommendations at %d"%sum(map(len,recomm_items_of.values())),br=True)
     return recomm_items_of
 
 def read_passed_ratings_at(d):
@@ -201,29 +202,20 @@ if _lock_train:
     progress("training...")
     users_filename = gen_path(data_dirpath, "users.dat")
     items_filename = gen_path(data_dirpath, "items.dat")
-    cmd = "%s %s %s %s %s"%(
-        train_prog,
-        train_filename, # argv[1]
-        users_filename, # argv[2]
-        items_filename, # argv[3]
-        model_filename  # argv[4]
-    )
-    def gen_cmd(train_lang, cmd):
-        lang_cmds ={
-                "python": "%s %s"%(train_lang, cmd),
-                "matlab": "%s -r \"%s\""%(train_lang, cmd),
-                }
-        try:
-            return lang_cmds[train_lang]
-        except KeyError:
-            raise Exception("available languages are %s, %s is not included (please contact administrator)"%(", ".join(lang_cmds.keys())), train_lang)
-    os.system(gen_cmd(train_lang, cmd))
+    arg = [
+        train_filename,
+        users_filename,
+        items_filename,
+        model_filename
+    ]
+    os.system(gen_cmd(train_lang, train_prog, arg))
 
     progress("training done!", br=True)
 
 ##### PREDICTING PHASE #####
 candidates_filename = "%s.candidates"%train_filename
 exposure_filename = "%s.exposure"%train_filename
+clicked_filename = "%s.clicked"%train_filename
 predict_filename = "%s.predict"%model_filename
 if _lock_predict:
     progress("predicting...",br=True)
@@ -266,6 +258,13 @@ if _lock_predict:
         for i in exposure:
             fout.write("%d:%d\n"%(i,exposure[i]))
 
+    # write clicked pairs
+    fout_filename = clicked_filename
+    with open(fout_filename, "w") as fout:
+        progress("writing %s..."%fout_filename)
+        for u,i,r,t in train_ratings:
+            fout.write("%d %d\n"%(u,i))
+
     # RMSE
     U,I = read_model_at(train_end_at_d)
     rmse = 0
@@ -278,14 +277,14 @@ if _lock_predict:
 
     # predict
     progress("predicting...")
-    os.system("%s %s %s %s %s %s"%(
-        augment_lang,
-        augment_prog,
-        candidates_filename, # argv[1]
-        model_filename,      # argv[3]
-        exposure_filename,   # argv[2]
-        predict_filename     # argv[4]
-    ))
+    arg = [
+            candidates_filename,
+            model_filename,
+            exposure_filename,
+            clicked_filename,
+            predict_filename
+            ]
+    os.system(gen_cmd(augment_lang, augment_prog, arg))
     
     progress("predicting done!", br=True)
 

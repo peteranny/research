@@ -20,3 +20,16 @@ def gen_mk_out_filename():
     import sys
     return "%s.out"%sys.argv[0][sys.argv[0].index('_')+1:sys.argv[0].rindex('.')]
 
+def gen_cmd(lang, prog, arg):
+    lang_cmds = {
+            "python": "%s %s %s"%(lang, prog, " ".join(arg)),
+            "matlab": "%s -r \"%s %s\""%(lang, prog, " ".join(arg)),
+            }
+    try:
+        return lang_cmds[lang]
+    except KeyError:
+        raise Exception(
+                "available languages are " + ", ".join(lang_cmds.keys()) +
+                ", " + lang + "%s is not included (please contact administrator)"
+                )
+
