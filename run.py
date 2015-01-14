@@ -6,9 +6,9 @@ from __future__ import division
 import sys, os, numpy
 from collections import defaultdict
 from lib import *
-_,data_dirpath,train_end_at_d,data_end_d,train_lang,train_prog,augment_lang,augment_prog,k,locks = sys.argv
-_lock_setData,_lock_train,_lock_predict,_lock_recommend,_lock_examine = map(lambda b:b=='1',list(locks))
-train_end_at_d,data_end_d,k = int(train_end_at_d),int(data_end_d),int(k)
+_,data_dirpath,train_end_at_d,data_end_d,train_lang,train_prog,augment_lang,augment_prog,K,locks = sys.argv
+_lock_setData,_lock_train,_lock_augment,_lock_recommend,_lock_examine = map(lambda b:b=='1',list(locks))
+train_end_at_d,data_end_d,K = int(train_end_at_d),int(data_end_d),int(K)
 
 def read_data_at(d):
     ratings = []
@@ -66,7 +66,7 @@ def read_exposure_at(d):
 
 def read_recommend_at(d):
     recomm_items_of = {}
-    fin_filename = gen_data_filename(d, data_end_d, "train.model.predict.recommend")
+    fin_filename = gen_data_filename(d, data_end_d, "train.candidates.predict.augment.recommend")
     with open(fin_filename) as fin:
         progress("reading %s..."%fin_filename)
         for line in fin:
@@ -78,7 +78,7 @@ def read_recommend_at(d):
 
 def read_passed_ratings_at(d):
     ratings = []
-    fin_filename = gen_data_filename(d, data_end_d, "train.model.predict.recommend.passed")
+    fin_filename = gen_data_filename(d, data_end_d, "train.candidates.predict.augment.recommend.passed")
     with open(fin_filename) as fin:
         progress("reading %s..."%fin_filename)
         for line in fin:
@@ -116,29 +116,29 @@ def read_model_at(d):
     with open(model_filename) as fin:
         ### read U nRows & nCols
         line = fin.readline()
-        nUsers,K = map(int,line.split())
-        progress("size(U) = %d x %d"%(nUsers,K), br=True)
+        nUsers,D = map(int,line.split())
+        progress("size(U) = %d x %d"%(nUsers,D), br=True)
     
         ### read U
         for j in range(nUsers):
             line = fin.readline()
             u,vec = line.split(':')
             u,vec = int(u), numpy.array(map(float,vec.split()))
-            assert len(vec)==K
+            assert len(vec)==D
             U[u] = vec
     
         ### read I nRows & nCols
         line = fin.readline()
-        nItems,K_ = map(int,line.split())
-        assert K_==K # dimension of U,I should be identical
-        progress("size(I) = %d x %d"%(nItems,K), br=True)
+        nItems,D_ = map(int,line.split())
+        assert D_==D # dimension of U,I should be identical
+        progress("size(I) = %d x %d"%(nItems,D), br=True)
     
         ### read I
         for j in range(nItems):
             line = fin.readline()
             i,vec = line.split(':')
             i,vec = int(i), numpy.array(map(float,vec.split()))
-            assert len(vec)==K
+            assert len(vec)==D
             I[i] = vec
     return U,I
 
@@ -195,8 +195,35 @@ if _lock_setData:
 
 ##### TRAINING PHASE #####
 model_filename = "%s.model"%train_filename
+candidates_filename = "%s.candidates"%train_filename
+predict_filename = "%s.predict"%candidates_filename
 if _lock_train:
     progress("training...",br=True)
+
+    try:
+        train_ratings
+    except NameError:
+        train_ratings = read_train_ratings_at(train_end_at_d)
+    try:
+        users, items
+    except NameError:
+        users = read_users()
+        items = read_items()
+    
+    # candidates to predict
+    rated = defaultdict(bool)
+    for u,i,r,t in train_ratings:
+        rated[u,i] = True
+    candidates = [(u,i) for u in users for i in items if not rated[u,i]]
+
+    progress("%d candidates"%len(candidates),br=True)
+    
+    # write candidates
+    fout_filename = candidates_filename
+    with open(fout_filename, "w") as fout:
+        progress("writing %s..."%fout_filename)
+        for u,i in candidates:
+            fout.write("%d %d\n"%(u,i))
 
     # train
     progress("training...")
@@ -206,18 +233,19 @@ if _lock_train:
         train_filename,
         users_filename,
         items_filename,
-        model_filename
+        candidates_filename,
+        model_filename,
+        predict_filename
     ]
     os.system(gen_cmd(train_lang, train_prog, arg))
 
     progress("training done!", br=True)
 
-##### PREDICTING PHASE #####
-candidates_filename = "%s.candidates"%train_filename
+##### AUGMENTING PHASE #####
 exposure_filename = "%s.exposure"%train_filename
 clicked_filename = "%s.clicked"%train_filename
-predict_filename = "%s.predict"%model_filename
-if _lock_predict:
+augment_filename = "%s.augment"%predict_filename
+if _lock_augment:
     progress("predicting...",br=True)
 
     try:
@@ -230,21 +258,6 @@ if _lock_predict:
     except NameError:
         users = read_users()
         items = read_items()
-    
-    # candidates to recommend
-    unrated = set([(u,i) for u in users for i in items])
-    rated = set([(u,i) for u,i,r,t in train_ratings])
-    unrated -= rated
-    candidates = list(unrated)
-
-    progress("%d candidates"%len(candidates),br=True)
-    
-    # write candidates
-    fout_filename = candidates_filename
-    with open(fout_filename, "w") as fout:
-        progress("writing %s..."%fout_filename)
-        for u,i in candidates:
-            fout.write("%d %d\n"%(u,i))
 
     # item exposure
     exposure = {i:0 for i in items}
@@ -276,20 +289,20 @@ if _lock_predict:
     progress("model has RMSE=%.2f"%rmse,br=True)
 
     # predict
-    progress("predicting...")
+    progress("augmenting...")
     arg = [
-            candidates_filename,
+            predict_filename,
             model_filename,
             exposure_filename,
             clicked_filename,
-            predict_filename
+            augment_filename
             ]
     os.system(gen_cmd(augment_lang, augment_prog, arg))
     
-    progress("predicting done!", br=True)
+    progress("augmenting done!", br=True)
 
 ##### RECOMMENDING PHASE #####
-recommend_filename = "%s.recommend"%predict_filename
+recommend_filename = "%s.recommend"%augment_filename
 if _lock_recommend:
     progress("recommending...",br=True)
 
@@ -314,7 +327,7 @@ if _lock_recommend:
     recomm_items_of = {}
     for u,xs in u_predict_ratings.iteritems():
         recomm_items = sorted(xs, key=lambda (i,r_):r_, reverse=True) # sort by predicted ratings
-        recomm_items = recomm_items[:k] # pick top-K
+        recomm_items = recomm_items[:K] # pick top-K
         recomm_items = map(lambda (i,_r):i, recomm_items) # discard predicted ratings
         recomm_items_of[u] = recomm_items
 

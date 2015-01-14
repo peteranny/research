@@ -5,7 +5,7 @@ data_end_d=10
 train_lang=python
 train_prog=train.py
 augment_lang=python
-augment_prog=augment.py
+augment_prog=no-augment.py
 topK=5
 
 for d in `seq 1 $(($data_end_d-1))`;

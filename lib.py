@@ -23,7 +23,7 @@ def gen_mk_out_filename():
 def gen_cmd(lang, prog, arg):
     lang_cmds = {
             "python": "%s %s %s"%(lang, prog, " ".join(arg)),
-            "matlab": "%s -r \"%s %s\""%(lang, prog, " ".join(arg)),
+            "matlab": "%s -r \"%s %s;exit\""%(lang, prog, " ".join(arg)),
             }
     try:
         return lang_cmds[lang]

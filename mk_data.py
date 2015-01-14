@@ -1,35 +1,56 @@
 ### mk_data
 
-import sys
-_,data_dirpath,nDiv,min_nRatings = sys.argv
-nDiv,min_nRatings = int(nDiv),int(min_nRatings)
+import sys,math,pprint
+from collections import Counter,defaultdict
 from lib import progress,gen_data_filename,gen_path
+_,data_src,data_dirpath,nDiv = sys.argv
+nDiv = int(nDiv)
 
 ### read raw data
-fin_filename = "../data/movieLen/ml-100k/u.data"
-progress("reading %s..."%fin_filename)
 ratings = []
-with open(fin_filename, "r") as fin:
-    for line in fin:
-        u,i,r,t = map(int, line.split())
-        ratings.append((u,i,r,t))
+if data_src=="ml-100k":
+    fin_filename = "../data/movieLen/ml-100k/u.data"
+    with open(fin_filename, "r") as fin:
+        progress("reading %s..."%fin_filename)
+        for line in fin:
+            u,i,r,t = map(int, line.split())
+            ratings.append((u,i,r,t))
+elif data_src=="ml-1m":
+    fin_filename = "../data/movieLen/ml-1m/ratings.dat"
+    with open(fin_filename) as fin:
+        progress("reading %s..."%fin_filename)
+        for line in fin:
+            u,i,r,t = line.split('::')
+            u,i,r,t = int(u),int(i),int(r),int(t)
+            ratings.append((u,i,r,t))
+else:
+    raise Exception("data_src : ml-100k / ml-1m")
 progress("%d ratings (raw data)"%len(ratings),br=True)
+
+### ask for min_nRatings
+while True:
+    bin_size = int(raw_input("Enter the bin size (0 to end): "))
+    if bin_size==0: break
+    ori_exposure = Counter([i for u,i,r,t in ratings])
+    ori_exposure_bins = defaultdict(int)
+    for i in ori_exposure:
+        ori_exposure_bins[i//bin_size*bin_size] += ori_exposure[i]
+    ori_exposure_str = pprint.pformat(dict(ori_exposure_bins), width=1)
+    progress(ori_exposure_str, br=True)
+min_nRatings = int(raw_input("Enter min number of ratings per item : "))
 
 ### filter items whose exposure not sufficient enough
 progress("filtering...")
-from collections import Counter
 exposure = Counter([i for u,i,r,t in ratings])
-ratings = list(filter(lambda (u,i,r,t):exposure[i]>min_nRatings, ratings))
+ratings = list(filter(lambda (u,i,r,t):exposure[i]>=min_nRatings, ratings))
 
 ### convert rating format (in time)
 progress("processing data...")
-from collections import defaultdict
 t_ratings = defaultdict(dict)
 for u,i,r,t in ratings:
     t_ratings[t][(u,i)] = r
 
 ### time division size
-import math
 timeline = sorted(t_ratings.keys())
 timeIndex_chunkSize = int(math.ceil(len(timeline)/nDiv))
 

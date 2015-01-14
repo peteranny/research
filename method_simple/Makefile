@@ -7,5 +7,16 @@ ls:
 clean:
 	rm -rf .* *~
 cleanData:
-	rm -rf *.out *.test *.train *.model *.candidates *.exposure *.clicked *.predict *.recommend *.passed
+	rm -rf \
+		*.out \
+		*.test \
+		*.train \
+		*.model \
+		*.candidates \
+		*.predict \
+		*.exposure \
+		*.clicked \
+		*.augment \
+		*.recommend \
+		*.passed
 
