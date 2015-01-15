@@ -6,9 +6,15 @@ from __future__ import division
 import sys, os, numpy
 from collections import defaultdict
 from lib import *
-_,data_dirpath,train_end_at_d,data_end_d,train_lang,train_prog,augment_lang,augment_prog,K,locks = sys.argv
+_,data_dirpath,train_end_at_d,train_lang,train_prog,augment_lang,augment_prog,K,locks = sys.argv
 _lock_setData,_lock_train,_lock_augment,_lock_recommend,_lock_examine = map(lambda b:b=='1',list(locks))
-train_end_at_d,data_end_d,K = int(train_end_at_d),int(data_end_d),int(K)
+train_end_at_d,K = int(train_end_at_d),int(K)
+
+fin_filename = gen_path(data_dirpath, "data.analysis")
+with open(fin_filename) as fin:
+    line = fin.readline()
+    data_end_d = len(line.split()) - 1
+progress("data_end_d = %d"%data_end_d,br=True)
 
 def read_data_at(d):
     ratings = []
@@ -183,6 +189,9 @@ if _lock_setData:
                 test_ratings.append((u,i,r,t)) # add to testing data
     
     progress("%d testing ratings"%len(test_ratings), br=True)
+    if len(test_ratings)==0:
+        progress("The future data is empty at %d"%train_end_at_d, br=True)
+        exit(1)
     
     # write testing data
     fout_filename = test_filename

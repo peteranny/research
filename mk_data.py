@@ -3,19 +3,18 @@
 import sys,math,pprint
 from collections import Counter,defaultdict
 from lib import progress,gen_data_filename,gen_path
-_,data_src,data_dirpath,nDiv = sys.argv
-nDiv = int(nDiv)
+_,src_name = sys.argv
 
 ### read raw data
 ratings = []
-if data_src=="ml-100k":
+if src_name=="ml-100k":
     fin_filename = "../data/movieLen/ml-100k/u.data"
     with open(fin_filename, "r") as fin:
         progress("reading %s..."%fin_filename)
         for line in fin:
             u,i,r,t = map(int, line.split())
             ratings.append((u,i,r,t))
-elif data_src=="ml-1m":
+elif src_name=="ml-1m":
     fin_filename = "../data/movieLen/ml-1m/ratings.dat"
     with open(fin_filename) as fin:
         progress("reading %s..."%fin_filename)
@@ -24,24 +23,28 @@ elif data_src=="ml-1m":
             u,i,r,t = int(u),int(i),int(r),int(t)
             ratings.append((u,i,r,t))
 else:
-    raise Exception("data_src : ml-100k / ml-1m")
+    raise Exception("src_name : ml-100k / ml-1m")
 progress("%d ratings (raw data)"%len(ratings),br=True)
 
 ### ask for min_nRatings
+exposure = Counter([i for u,i,r,t in ratings])
 while True:
     bin_size = int(raw_input("Enter the bin size (0 to end): "))
     if bin_size==0: break
-    ori_exposure = Counter([i for u,i,r,t in ratings])
-    ori_exposure_bins = defaultdict(int)
-    for i in ori_exposure:
-        ori_exposure_bins[i//bin_size*bin_size] += ori_exposure[i]
-    ori_exposure_str = pprint.pformat(dict(ori_exposure_bins), width=1)
-    progress(ori_exposure_str, br=True)
+    bins = defaultdict(int)
+    for i,e in exposure.items():
+        bins[e//bin_size*bin_size] += 1
+    progress(pprint.pformat(dict(bins), width=1), br=True)
 min_nRatings = int(raw_input("Enter min number of ratings per item : "))
+
+### ask for nDiv
+nDiv = int(raw_input("Enter nDiv : "))
+
+### ask for data_dirpath
+data_dirpath = raw_input("Enter the data name : ")
 
 ### filter items whose exposure not sufficient enough
 progress("filtering...")
-exposure = Counter([i for u,i,r,t in ratings])
 ratings = list(filter(lambda (u,i,r,t):exposure[i]>=min_nRatings, ratings))
 
 ### convert rating format (in time)

@@ -66,6 +66,8 @@ for i in items:
 E = float('inf')
 for step in xrange(steps):
     while True:
+        if eta<1e-20:
+            break
         newU,newI = copy.deepcopy(U),copy.deepcopy(I)
         for u in users:
             for d in range(D):
