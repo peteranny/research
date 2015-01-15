@@ -28,26 +28,38 @@ def read_data_at(d):
     return ratings
 
 def read_train_ratings_at(d):
-    ratings = []
+    train_ratings = []
     fin_filename = gen_data_filename(d, data_end_d, "train")
     with open(fin_filename) as fin:
         progress("reading %s..."%fin_filename)
         for line in fin:
             u,i,r,t = map(int,line.split())
-            ratings.append((u,i,r,t))
-    progress("%d training ratings at %d"%(len(ratings),d),br=True)
-    return ratings
+            train_ratings.append((u,i,r,t))
+    progress("%d training ratings at %d"%(len(train_ratings),d),br=True)
+    return train_ratings
 
 def read_test_ratings_at(d):
-    ratings = []
+    test_ratings = []
     fin_filename = gen_data_filename(d, data_end_d, "test")
     with open(fin_filename) as fin:
         progress("reading %s..."%fin_filename)
         for line in fin:
             u,i,r,t = map(int,line.split())
-            ratings.append((u,i,r,t))
-    progress("%d testing ratings at %d"%(len(ratings),d),br=True)
-    return ratings
+            test_ratings.append((u,i,r,t))
+    progress("%d testing ratings at %d"%(len(test_ratings),d),br=True)
+    return test_ratings
+
+def read_predict_ratings_at(d):
+    predict_ratings = []
+    fin_filename = predict_filename
+    with open(fin_filename) as fin:
+        progress("reading %s..."%fin_filename)
+        for line in fin:
+            u,i,r_ = line.split()
+            u,i,r_ = int(u),int(i),float(r_)
+            predict_ratings.append((u,i,r_))
+    progress("%d predicted ratings at %d"%(len(predict_ratings),d),br=True)
+    return predict_ratings
 
 def read_candidates_at(d):
     candidates = []
@@ -115,39 +127,6 @@ def read_items():
     progress("%d items"%len(items),br=True)
     return items
 
-def read_model_at(d):
-    fin_filename = gen_data_filename(d, data_end_d, "train.model")
-    progress("reading %s..."%fin_filename)
-    U,I = dict(),dict()
-    with open(model_filename) as fin:
-        ### read U nRows & nCols
-        line = fin.readline()
-        nUsers,D = map(int,line.split())
-        progress("size(U) = %d x %d"%(nUsers,D), br=True)
-    
-        ### read U
-        for j in range(nUsers):
-            line = fin.readline()
-            u,vec = line.split(':')
-            u,vec = int(u), numpy.array(map(float,vec.split()))
-            assert len(vec)==D
-            U[u] = vec
-    
-        ### read I nRows & nCols
-        line = fin.readline()
-        nItems,D_ = map(int,line.split())
-        assert D_==D # dimension of U,I should be identical
-        progress("size(I) = %d x %d"%(nItems,D), br=True)
-    
-        ### read I
-        for j in range(nItems):
-            line = fin.readline()
-            i,vec = line.split(':')
-            i,vec = int(i), numpy.array(map(float,vec.split()))
-            assert len(vec)==D
-            I[i] = vec
-    return U,I
-
 ##### DATA-SETTING PHASE #####
 train_filename = gen_data_filename(train_end_at_d, data_end_d, "train")
 test_filename  = gen_data_filename(train_end_at_d, data_end_d, "test")
@@ -210,9 +189,10 @@ if _lock_train:
     progress("training...",br=True)
 
     try:
-        train_ratings
+        train_ratings,test_ratings
     except NameError:
         train_ratings = read_train_ratings_at(train_end_at_d)
+        test_ratings = read_test_ratings_at(train_end_at_d)
     try:
         users, items
     except NameError:
@@ -247,6 +227,13 @@ if _lock_train:
         predict_filename
     ]
     os.system(gen_cmd(train_lang, train_prog, arg))
+
+    # RMSE
+    predict_ratings = read_predict_ratings_at(train_end_at_d)
+    ui_predict_ratings = {(u,i):r for u,i,r in predict_ratings}
+    rmse = ( sum([(r - ui_predict_ratings[u,i])**2 for u,i,r,t in test_ratings]) \
+            /len(test_ratings) )**1/2
+    progress("model has RMSE=%.2f"%rmse,br=True)
 
     progress("training done!", br=True)
 
@@ -287,16 +274,6 @@ if _lock_augment:
         for u,i,r,t in train_ratings:
             fout.write("%d %d\n"%(u,i))
 
-    # RMSE
-    U,I = read_model_at(train_end_at_d)
-    rmse = 0
-    for u,i,r,t in test_ratings:
-        r_ = numpy.dot(U[u],I[i])
-        rmse += (r - r_)**2
-    rmse /= len(test_ratings)
-    rmse **= 1/2
-    progress("model has RMSE=%.2f"%rmse,br=True)
-
     # predict
     progress("augmenting...")
     arg = [
@@ -315,16 +292,10 @@ recommend_filename = "%s.recommend"%augment_filename
 if _lock_recommend:
     progress("recommending...",br=True)
 
-    predict_ratings = []
-    fin_filename = predict_filename
-    with open(fin_filename) as fin:
-        progress("reading %s..."%fin_filename)
-        for line in fin:
-            u,i,r_ = line.split()
-            u,i,r_ = int(u),int(i),float(r_)
-            predict_ratings.append((u,i,r_))
-
-    progress("%d predicted ratings at %d"%(len(predict_ratings),train_end_at_d),br=True)
+    try:
+        predict_ratings
+    except NameError:
+        predict_ratings = read_predict_ratings_at(train_end_at_d)
 
     # candidate items (& predicted ratings) for each user
     progress("candidate items for each user...")

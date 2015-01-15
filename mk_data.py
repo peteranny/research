@@ -34,6 +34,7 @@ while True:
     bins = defaultdict(int)
     for i,e in exposure.items():
         bins[e//bin_size*bin_size] += 1
+    progress("exposure>: #items",br=True)
     progress(pprint.pformat(dict(bins), width=1), br=True)
 min_nRatings = int(raw_input("Enter min number of ratings per item : "))
 
