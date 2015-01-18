@@ -95,10 +95,10 @@ def sigmoid(x):
 def d_sigmoid(x):
     return math.exp(-x) * sigmoid(x)**2
 T = 100
-topK = 20
+topK = 1
 rM = 5
 eta = 1e-3
-alpha1 = 1/max(w_i.values())*1e+3
+alpha1 = 1e+2
 alpha2 = 1e+2
 E = float('inf')
 #delta_0 = {u:sum([w_i[j]*ui_ratings[u,j] for j in items if (u,j) in ui_ratings]) for u in users}

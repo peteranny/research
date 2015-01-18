@@ -6,14 +6,14 @@ from __future__ import division
 import sys, os, numpy
 from collections import defaultdict
 from lib import *
-_,data_dirpath,train_end_at_d,train_lang,train_prog,augment_lang,augment_prog,K,locks = sys.argv
+_,data_dirpath,train_end_at_d,train_lang,train_prog,augment_lang,augment_prog,topK,delta,locks = sys.argv
 _lock_setData,_lock_train,_lock_augment,_lock_recommend,_lock_examine = map(lambda b:b=='1',list(locks))
-train_end_at_d,K = int(train_end_at_d),int(K)
+train_end_at_d,topK,delta = int(train_end_at_d),int(topK),float(delta)
 
 fin_filename = gen_path(data_dirpath, "data.analysis")
 with open(fin_filename) as fin:
     line = fin.readline()
-    data_end_d = len(line.split()) - 1
+    data_end_d = len(line.split()) - 2
 progress("data_end_d = %d"%data_end_d,br=True)
 
 def read_data_at(d):
@@ -48,18 +48,6 @@ def read_test_ratings_at(d):
             test_ratings.append((u,i,r,t))
     progress("%d testing ratings at %d"%(len(test_ratings),d),br=True)
     return test_ratings
-
-def read_predict_ratings_at(d):
-    predict_ratings = []
-    fin_filename = predict_filename
-    with open(fin_filename) as fin:
-        progress("reading %s..."%fin_filename)
-        for line in fin:
-            u,i,r_ = line.split()
-            u,i,r_ = int(u),int(i),float(r_)
-            predict_ratings.append((u,i,r_))
-    progress("%d predicted ratings at %d"%(len(predict_ratings),d),br=True)
-    return predict_ratings
 
 def read_candidates_at(d):
     candidates = []
@@ -136,7 +124,7 @@ if _lock_setData:
     # set training data
     train_ratings = []
 
-    if train_end_at_d!= 1: # skip this step when the first data division
+    if train_end_at_d!=0: # skip this step when the first data division
         # add previous training data
         train_ratings.extend( read_train_ratings_at(train_end_at_d-1) )
         # add previous predicted ratings
@@ -226,10 +214,23 @@ if _lock_train:
         model_filename,
         predict_filename
     ]
-    os.system(gen_cmd(train_lang, train_prog, arg))
+    if os.system(gen_cmd(train_lang, train_prog, arg))!=0:
+        progress("The following command goes wrong:",br=True)
+        print gen_cmd(train_lang, train_prog, arg)
+        exit(1)
+
+    # predicted ratings
+    predict_ratings = []
+    fin_filename = predict_filename
+    with open(fin_filename) as fin:
+        progress("reading %s..."%fin_filename)
+        for line in fin:
+            u,i,r = line.split()
+            u,i,r = int(u),int(i),float(r)
+            predict_ratings.append((u,i,r))
+    progress("%d predicted ratings"%(len(predict_ratings)),br=True)
 
     # RMSE
-    predict_ratings = read_predict_ratings_at(train_end_at_d)
     ui_predict_ratings = {(u,i):r for u,i,r in predict_ratings}
     rmse = ( sum([(r - ui_predict_ratings[u,i])**2 for u,i,r,t in test_ratings]) \
             /len(test_ratings) )**1/2
@@ -242,7 +243,7 @@ exposure_filename = "%s.exposure"%train_filename
 clicked_filename = "%s.clicked"%train_filename
 augment_filename = "%s.augment"%predict_filename
 if _lock_augment:
-    progress("predicting...",br=True)
+    progress("augmenting...",br=True)
 
     try:
         train_ratings,test_ratings
@@ -274,16 +275,20 @@ if _lock_augment:
         for u,i,r,t in train_ratings:
             fout.write("%d %d\n"%(u,i))
 
-    # predict
+    # augment
     progress("augmenting...")
     arg = [
             predict_filename,
             model_filename,
             exposure_filename,
             clicked_filename,
-            augment_filename
+            augment_filename,
+            "%f"%delta
             ]
-    os.system(gen_cmd(augment_lang, augment_prog, arg))
+    if os.system(gen_cmd(augment_lang, augment_prog, arg))!=0:
+        progress("The following command goes wrong:",br=True)
+        print gen_cmd(augment_lang, augment_prog, arg)
+        exit(1)
     
     progress("augmenting done!", br=True)
 
@@ -292,23 +297,28 @@ recommend_filename = "%s.recommend"%augment_filename
 if _lock_recommend:
     progress("recommending...",br=True)
 
-    try:
-        predict_ratings
-    except NameError:
-        predict_ratings = read_predict_ratings_at(train_end_at_d)
+    augment_ratings = []
+    fin_filename = augment_filename
+    with open(fin_filename) as fin:
+        progress("reading %s..."%fin_filename)
+        for line in fin:
+            u,i,r_ = line.split()
+            u,i,r_ = int(u),int(i),float(r_)
+            augment_ratings.append((u,i,r_))
+    progress("%d augmented ratings"%(len(augment_ratings)),br=True)
 
-    # candidate items (& predicted ratings) for each user
+    # candidate items (& augment ratings) for each user
     progress("candidate items for each user...")
-    u_predict_ratings = defaultdict(list)
-    for u,i,r_ in predict_ratings:
-        u_predict_ratings[u].append((i,r_))
+    u_augment_ratings = defaultdict(list)
+    for u,i,r_ in augment_ratings:
+        u_augment_ratings[u].append((i,r_))
     
     # recommend
     recomm_items_of = {}
-    for u,xs in u_predict_ratings.iteritems():
-        recomm_items = sorted(xs, key=lambda (i,r_):r_, reverse=True) # sort by predicted ratings
-        recomm_items = recomm_items[:K] # pick top-K
-        recomm_items = map(lambda (i,_r):i, recomm_items) # discard predicted ratings
+    for u,xs in u_augment_ratings.iteritems():
+        recomm_items = sorted(xs, key=lambda (i,r_):r_, reverse=True) # sort by augmented ratings
+        recomm_items = recomm_items[:topK] # pick top-K
+        recomm_items = map(lambda (i,_r):i, recomm_items) # discard augmented ratings
         recomm_items_of[u] = recomm_items
 
     # write recommendation

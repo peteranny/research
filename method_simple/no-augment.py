@@ -2,7 +2,8 @@ from __future__ import division
 from collections import defaultdict
 import sys,numpy,math
 sys.path.append("..")
-_,predict_filename,model_filename,exposure_filename,clicked_filename,augment_filename = sys.argv
+_,predict_filename,model_filename,exposure_filename,clicked_filename,augment_filename,delta = sys.argv
+delta = float(delta)
 import lib
 def progress(msg, br=False):
     lib.progress("[AUGMENT] %s"%msg,br)
